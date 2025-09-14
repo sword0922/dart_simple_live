@@ -1,313 +1,123 @@
-name: 简化构建全平台应用
+name: Android Kernel Driver Builder
 
 on:
-  push:
-    branches: [ main, master ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
-
-env:
-  PUB_HOSTED_URL: https://pub.flutter-io.cn
-  FLUTTER_STORAGE_BASE_URL: https://storage.flutter-io.cn
-  FLUTTER_VERSION: '3.24.0'
+    inputs:
+      android_version:
+        description: 'Android Version (Kernel) (e.g., 14)'
+        required: true
+      kernel_version:
+        description: 'Kernel Version (e.g., 6.1)'
+        required: true
+      driver_name:
+        description: 'Driver Module Name (e.g., mydriver.ko)'
+        required: true
+      target_arch:
+        description: 'Target Architecture (aarch64, x86_64, etc.)'
+        required: true
+        default: 'aarch64'
 
 jobs:
-  # 构建Android应用
-  build-android:
+  build:
     runs-on: ubuntu-latest
+    
     steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-
-    - name: 设置Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-
-    - name: 设置Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
-    - name: 构建主应用APK
-      run: |
-        cd simple_live_app
-        flutter pub get
-        flutter build apk --release
-
-    - name: 构建主应用AAB
-      run: |
-        cd simple_live_app
-        flutter build appbundle --release
-
-    - name: 设置Java 11
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '11'
-
-    - name: 构建TV应用APK
-      run: |
-        cd simple_live_tv_app
-        flutter pub get
-        flutter build apk --release
-
-    - name: 构建TV应用AAB
-      run: |
-        cd simple_live_tv_app
-        flutter build appbundle --release
-
-    - name: 上传主应用APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: simple_live_app-apk
-        path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
-
-    - name: 上传主应用AAB
-      uses: actions/upload-artifact@v4
-      with:
-        name: simple_live_app-aab
-        path: simple_live_app/build/app/outputs/bundle/release/app-release.aab
-
-    - name: 上传TV应用APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: simple_live_tv_app-apk
-        path: simple_live_tv_app/build/app/outputs/flutter-apk/app-release.apk
-
-    - name: 上传TV应用AAB
-      uses: actions/upload-artifact@v4
-      with:
-        name: simple_live_tv_app-aab
-        path: simple_live_tv_app/build/app/outputs/bundle/release/app-release.aab
-
-  # 构建Windows应用
-  build-windows:
-    runs-on: windows-latest
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-
-    - name: 设置Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-
-    - name: 安装依赖
-      run: |
-        cd simple_live_app
-        flutter pub get
-
-    - name: 构建Windows应用
-      run: |
-        cd simple_live_app
-        flutter build windows --release
-
-    - name: 压缩Windows应用
-      run: |
-        cd simple_live_app/build/windows/x64/runner/Release
-        Compress-Archive -Path * -DestinationPath ../../../SimpleLiveApp-Windows.zip
-
-    - name: 上传Windows应用
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-app
-        path: simple_live_app/build/windows/SimpleLiveApp-Windows.zip
-
-  # 构建Linux应用
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-
-    - name: 设置Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-
-    - name: 安装Linux依赖
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
-
-    - name: 安装依赖
-      run: |
-        cd simple_live_app
-        flutter pub get
-
-    - name: 构建Linux应用
-      run: |
-        cd simple_live_app
-        flutter build linux --release
-
-    - name: 压缩Linux应用
-      run: |
-        cd simple_live_app/build/linux/x64/release/bundle
-        tar -czf ../../../SimpleLiveApp-Linux.tar.gz .
-
-    - name: 上传Linux应用
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-app
-        path: simple_live_app/build/linux/SimpleLiveApp-Linux.tar.gz
-
-  # 构建macOS应用
-  build-macos:
-    runs-on: macos-latest
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-
-    - name: 设置Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-
-    - name: 安装依赖
-      run: |
-        cd simple_live_app
-        flutter pub get
-
-    - name: 构建macOS应用
-      run: |
-        cd simple_live_app
-        flutter build macos --release
-
-    - name: 压缩macOS应用
-      run: |
-        cd simple_live_app/build/macos/Build/Products/Release
-        zip -r ../../../SimpleLiveApp-macOS.zip SimpleLiveApp.app
-
-    - name: 上传macOS应用
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-app
-        path: simple_live_app/build/macos/SimpleLiveApp-macOS.zip
-
-  # 构建Web应用
-  build-web:
-    runs-on: ubuntu-latest
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-
-    - name: 设置Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-        cache: true
-
-    - name: 安装依赖
-      run: |
-        cd simple_live_app
-        flutter pub get
-
-    - name: 构建Web应用
-      run: |
-        cd simple_live_app
-        flutter build web --release
-
-    - name: 压缩Web应用
-      run: |
-        cd simple_live_app/build/web
-        zip -r ../SimpleLiveApp-Web.zip .
-
-    - name: 上传Web应用
-      uses: actions/upload-artifact@v4
-      with:
-        name: web-app
-        path: simple_live_app/build/SimpleLiveApp-Web.zip
-
-  # 构建控制台应用
-  build-console:
-    runs-on: ubuntu-latest
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
-
-    - name: 设置Dart
-      uses: dart-lang/setup-dart@v1
-      with:
-        sdk: stable
-
-    - name: 安装依赖
-      run: |
-        cd simple_live_console
-        dart pub get
-
-    - name: 构建控制台应用
-      run: |
-        cd simple_live_console
-        dart compile exe bin/simple_live_console.dart -o simple_live_console
-
-    - name: 上传控制台应用
-      uses: actions/upload-artifact@v4
-      with:
-        name: console-app
-        path: simple_live_console/simple_live_console
-
-  # 创建发布
-  create-release:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: [build-android, build-windows, build-linux, build-macos, build-web, build-console]
-    runs-on: ubuntu-latest
-    steps:
-    - name: 下载所有构建产物
-      uses: actions/download-artifact@v4
-
-    - name: 获取版本号
-      id: version
-      run: |
-        echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-    - name: 创建发布
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.version.outputs.version }}
-        name: Simple Live ${{ steps.version.outputs.version }}
-        body: |
-          ## Simple Live ${{ steps.version.outputs.version }}
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        
+      - name: Prepare kerneldriver directory
+        run: |
+          mkdir kerneldriver
+          mv ./code/*.h ./code/*.c ./code/Makefile kerneldriver/
           
-          ### 📱 移动应用
-          - **Android APK**: 适用于Android设备的安装包
-          - **Android AAB**: 适用于Google Play Store的应用包
-          - **TV应用**: 专为Android TV优化的版本
+      - name: Install repo tool
+        run: |
+          sudo curl -L https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo
+          sudo chmod a+x /usr/local/bin/repo
+
+      - name: Set up Android Kernel source
+        run: |
+          mkdir -p android-kernel && cd android-kernel
+          repo init -u https://android.googlesource.com/kernel/manifest -b common-android${{ github.event.inputs.android_version }}-${{ github.event.inputs.kernel_version }}
+          repo sync -j$(nproc) -c --no-tags --optimized-fetch --force-sync
+
+      - name: Copy kerneldriver
+        run: |
+          cd android-kernel
+          cp -r ../kerneldriver common/drivers
+
+      - name: Modify Makefile
+        run: |
+          cd android-kernel
+          echo "obj-y += kerneldriver/" >> common/drivers/Makefile
+
+      - name: Add module to GKI modules list
+        if: ${{ github.event.inputs.android_version > 13 }}
+        run: |
+          cd android-kernel
+          MODULE_NAME="drivers/kerneldriver/${{ github.event.inputs.driver_name }}"
           
-          ### 🖥️ 桌面应用
-          - **Windows**: 适用于Windows 10/11的桌面应用
-          - **macOS**: 适用于macOS的桌面应用
-          - **Linux**: 适用于Linux发行版的桌面应用
+          awk -i inplace -v module="$MODULE_NAME" '
+            BEGIN { added=0 }
+            /_COMMON_GKI_MODULES_LIST = \[/ { in_list=1 }
+            in_list && /\]/ {
+              if (!added) {
+                print "    \"" module "\","
+                added=1
+              }
+              in_list=0
+            }
+            in_list && !added {
+              if (module < $0) {
+                print "    \"" module "\","
+                added=1
+              }
+            }
+            { print }
+          ' common/modules.bzl
           
-          ### 🌐 Web应用
-          - **Web版本**: 可在浏览器中直接使用的Web应用
+      - name: Prepare module list for legacy builds
+        if: ${{ github.event.inputs.android_version <= 13 }}
+        run: |
+          cd android-kernel
+          echo "drivers/kerneldriver/${{ github.event.inputs.driver_name }}" >> common/android/gki_aarch64_modules
+      - name: Increase stack frame size limit
+        run: |
+          cd android-kernel
+          find . -type f -name "Makefile*" -exec sed -i 's/-Wframe-larger-than=[0-9]*/-Wframe-larger-than=4096/g' {} +
+          grep -q "FRAME_WARN" common/Makefile || echo 'KBUILD_CFLAGS += -Wframe-larger-than=4096' >> common/Makefile
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison libssl-dev libelf-dev bc python-is-python3
+      - name: Fix missing kprobe symbols for Android 13
+        if: ${{ github.event.inputs.android_version == 13 }}
+        run: |
+          cd android-kernel
+          for symbol in register_kprobe unregister_kprobe; do
+            grep -q "$symbol" common/android/abi_gki_${{ github.event.inputs.target_arch }} || \
+            echo "$symbol" >> common/android/abi_gki_${{ github.event.inputs.target_arch }}
+          done
+          sed -i '/EXPORT_SYMBOL(unregister_kprobe);/a EXPORT_SYMBOL(register_kprobe);' common/kernel/kprobes.c
           
-          ### 🖥️ 控制台应用
-          - **命令行工具**: 适用于服务器和开发环境的命令行版本
-        files: |
-          simple_live_app-apk/app-release.apk
-          simple_live_app-aab/app-release.aab
-          simple_live_tv_app-apk/app-release.apk
-          simple_live_tv_app-aab/app-release.aab
-          windows-app/SimpleLiveApp-Windows.zip
-          linux-app/SimpleLiveApp-Linux.tar.gz
-          macos-app/SimpleLiveApp-macOS.zip
-          web-app/SimpleLiveApp-Web.zip
-          console-app/simple_live_console
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build kernel module
+        run: |
+          cd android-kernel
+          if [ ${{ github.event.inputs.android_version }} -le 13 ]; then
+            BUILD_CONFIG=common/build.config.gki.${{ github.event.inputs.target_arch }} LTO=thin build/build.sh -j32
+            OUTPUT_PATH="out/android${{ github.event.inputs.android_version }}-${{ github.event.inputs.kernel_version }}/dist"
+          else
+            echo "Using Bazel build system for Android ${{ github.event.inputs.android_version }}"
+            tools/bazel run //common:kernel_${{ github.event.inputs.target_arch }}_dist
+            OUTPUT_PATH="out/kernel_${{ github.event.inputs.target_arch }}"
+          fi
+          echo "OUTPUT_PATH=$OUTPUT_PATH" >> $GITHUB_ENV
+        continue-on-error: true
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: kernel-driver-${{ github.event.inputs.target_arch }}
+          path: |
+            android-kernel/${{ env.OUTPUT_PATH }}
